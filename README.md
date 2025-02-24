@@ -1,66 +1,122 @@
-<p align="center"><a href="https://laravel.com" target="_blank"><img src="https://raw.githubusercontent.com/laravel/art/master/logo-lockup/5%20SVG/2%20CMYK/1%20Full%20Color/laravel-logolockup-cmyk-red.svg" width="400" alt="Laravel Logo"></a></p>
+# Hướng Dẫn Chạy Dự Án Laravel
 
-<p align="center">
-<a href="https://github.com/laravel/framework/actions"><img src="https://github.com/laravel/framework/workflows/tests/badge.svg" alt="Build Status"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/dt/laravel/framework" alt="Total Downloads"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/v/laravel/framework" alt="Latest Stable Version"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/l/laravel/framework" alt="License"></a>
-</p>
+## 1. Yêu Cầu Hệ Thống
+Trước khi chạy dự án Laravel, cần đảm bảo bạn đã cài đặt các công cụ sau:
+- **PHP** (phiên bản phù hợp với Laravel, khuyến nghị từ PHP 8.0 trở lên)
+- **Composer** (trình quản lý gói PHP)
+- **SQLite** (do dự án sử dụng SQLite làm database)
+- **Node.js & NPM** (nếu sử dụng frontend với Laravel Mix hoặc Vite)
+- **Redis** (nếu được sử dụng trong dự án)
 
-## About Laravel
+## 2. Clone Hoặc Tải Mã Nguồn
+Nếu dự án có sẵn trên GitHub/GitLab, bạn có thể clone về bằng lệnh:
 
-Laravel is a web application framework with expressive, elegant syntax. We believe development must be an enjoyable and creative experience to be truly fulfilling. Laravel takes the pain out of development by easing common tasks used in many web projects, such as:
+```bash
+git clone https://github.com/your-repo/project.git
+cd project
+```
 
-- [Simple, fast routing engine](https://laravel.com/docs/routing).
-- [Powerful dependency injection container](https://laravel.com/docs/container).
-- Multiple back-ends for [session](https://laravel.com/docs/session) and [cache](https://laravel.com/docs/cache) storage.
-- Expressive, intuitive [database ORM](https://laravel.com/docs/eloquent).
-- Database agnostic [schema migrations](https://laravel.com/docs/migrations).
-- [Robust background job processing](https://laravel.com/docs/queues).
-- [Real-time event broadcasting](https://laravel.com/docs/broadcasting).
+## 3. Cài Đặt Các Gói Phụ Thuộc
+Chạy lệnh sau để cài đặt thư viện PHP:
 
-Laravel is accessible, powerful, and provides tools required for large, robust applications.
+```bash
+composer install
+```
 
-## Learning Laravel
+Nếu dự án có frontend, chạy tiếp:
 
-Laravel has the most extensive and thorough [documentation](https://laravel.com/docs) and video tutorial library of all modern web application frameworks, making it a breeze to get started with the framework.
+```bash
+npm install
+```
 
-You may also try the [Laravel Bootcamp](https://bootcamp.laravel.com), where you will be guided through building a modern Laravel application from scratch.
+## 4. Cấu Hình File .env
+Sao chép file `.env.example` thành `.env`:
 
-If you don't feel like reading, [Laracasts](https://laracasts.com) can help. Laracasts contains thousands of video tutorials on a range of topics including Laravel, modern PHP, unit testing, and JavaScript. Boost your skills by digging into our comprehensive video library.
+```bash
+cp .env.example .env
+```
 
-## Laravel Sponsors
+Dự án sử dụng SQLite, cần tạo file database:
 
-We would like to extend our thanks to the following sponsors for funding Laravel development. If you are interested in becoming a sponsor, please visit the [Laravel Partners program](https://partners.laravel.com).
+```bash
+touch database/database.sqlite
+```
 
-### Premium Partners
+Cập nhật `.env`:
 
-- **[Vehikl](https://vehikl.com/)**
-- **[Tighten Co.](https://tighten.co)**
-- **[WebReinvent](https://webreinvent.com/)**
-- **[Kirschbaum Development Group](https://kirschbaumdevelopment.com)**
-- **[64 Robots](https://64robots.com)**
-- **[Curotec](https://www.curotec.com/services/technologies/laravel/)**
-- **[Cyber-Duck](https://cyber-duck.co.uk)**
-- **[DevSquad](https://devsquad.com/hire-laravel-developers)**
-- **[Jump24](https://jump24.co.uk)**
-- **[Redberry](https://redberry.international/laravel/)**
-- **[Active Logic](https://activelogic.com)**
-- **[byte5](https://byte5.de)**
-- **[OP.GG](https://op.gg)**
+```ini
+DB_CONNECTION=sqlite
+```
 
-## Contributing
+## 5. Tạo Key Cho Ứng Dụng
 
-Thank you for considering contributing to the Laravel framework! The contribution guide can be found in the [Laravel documentation](https://laravel.com/docs/contributions).
+```bash
+php artisan key:generate
+```
 
-## Code of Conduct
+## 6. Chạy Migration Và Seed Database (nếu có)
+Nếu dự án sử dụng database, chạy:
 
-In order to ensure that the Laravel community is welcoming to all, please review and abide by the [Code of Conduct](https://laravel.com/docs/contributions#code-of-conduct).
+```bash
+php artisan migrate --seed
+```
 
-## Security Vulnerabilities
+Nếu session, cache hoặc queue sử dụng database, chạy thêm:
 
-If you discover a security vulnerability within Laravel, please send an e-mail to Taylor Otwell via [taylor@laravel.com](mailto:taylor@laravel.com). All security vulnerabilities will be promptly addressed.
+```bash
+php artisan session:table
+php artisan cache:table
+php artisan queue:table
+php artisan migrate
+```
 
-## License
+## 7. Khởi Động Server Laravel
+Chạy lệnh:
 
-The Laravel framework is open-sourced software licensed under the [MIT license](https://opensource.org/licenses/MIT).
+```bash
+php artisan serve
+```
+
+Laravel sẽ chạy trên `http://localhost/`.
+
+## 8. Chạy Frontend (Nếu Có)
+Nếu dự án sử dụng Laravel Mix hoặc Vite:
+
+```bash
+npm run dev
+```
+
+Nếu build frontend cho production:
+
+```bash
+npm run build
+```
+
+## 9. Cấu Hình Mail (Nếu Cần)
+Dự án hiện tại sử dụng log để lưu email:
+
+```ini
+MAIL_MAILER=log
+MAIL_FROM_ADDRESS="hello@example.com"
+MAIL_FROM_NAME="Laravel"
+```
+
+Nếu cần gửi email thực, hãy chỉnh lại `.env` để sử dụng SMTP.
+
+## 10. Redis (Nếu Cấu Hình Cache, Queue)
+Nếu dự án sử dụng Redis, hãy chắc chắn Redis đang chạy và `.env` có thông số:
+
+```ini
+REDIS_CLIENT=phpredis
+REDIS_HOST=127.0.0.1
+REDIS_PORT=6379
+```
+
+## 11. Xử Lý Các Vấn Đề Thường Gặp
+- **Không chạy được migration** → Kiểm tra database SQLite đã được tạo chưa.
+- **Không gửi được email** → Kiểm tra cấu hình mail trong `.env`.
+- **CSS/JS không hiển thị** → Chạy `npm run dev` hoặc `php artisan storage:link` nếu dùng storage.
+
+## 12. Hoàn Thành 🎉
+Giờ bạn có thể truy cập `http://localhost/` và bắt đầu sử dụng Laravel!
+
