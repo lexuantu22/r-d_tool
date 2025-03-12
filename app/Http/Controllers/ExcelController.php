@@ -20,111 +20,112 @@ class ExcelController extends Controller
     }
 
     private function getMinMaxDates($reportData)
-{
-    $minDate = null;
-    $maxDate = null;
-
-    foreach ($reportData as $user => $dates) {
-        foreach ($dates as $date => $counts) {
-            $currentDate = Carbon::parse($date);
-            if (!$minDate || $currentDate->lt($minDate)) {
-                $minDate = $currentDate;
-            }
-            if (!$maxDate || $currentDate->gt($maxDate)) {
-                $maxDate = $currentDate;
+    {
+        $minDate = null;
+        $maxDate = null;
+        
+        foreach ($reportData as $user => $dates) {
+            foreach ($dates as $date => $counts) {
+                $currentDate = Carbon::parse($date);
+                if (!$minDate || $currentDate->lt($minDate)) {
+                    $minDate = $currentDate;
+                }
+                if (!$maxDate || $currentDate->gt($maxDate)) {
+                    $maxDate = $currentDate;
+                }
             }
         }
+        
+        // Lấy ngày đầu tháng của minDate và ngày cuối tháng của maxDate
+        if ($minDate && $maxDate) {
+            $startOfMonth = $minDate->copy()->startOfMonth();
+            $endOfMonth = $maxDate->copy()->endOfMonth();
+            return [$startOfMonth, $endOfMonth];
+        }
+    
+        return [null, null];
     }
-
-    return [$minDate, $maxDate];
-}
-
+    
     private function fillMissingDates(&$reportData, $minDate, $maxDate)
     {
-        $dateRange = Carbon::parse($minDate)->toPeriod($maxDate);
-
+        if (!$minDate || !$maxDate) {
+            return;
+        }
+        
+        $dateRange = Carbon::parse($minDate)->daysUntil($maxDate);
+        
+        // Tạo danh sách ngày chuẩn cho tất cả user
+        $allDates = [];
+        foreach ($dateRange as $date) {
+            if (!$date->isWeekend()) { // Bỏ qua thứ 7 và chủ nhật
+                $allDates[$date->format('Y-m-d')] = [
+                    'date' => $date->format('Y-m-d'),
+                    'created' => 0,
+                    'executed' => 0,
+                    'retested' => 0,
+                ];
+            }
+        }
+        
         foreach ($reportData as $user => &$dates) {
-            // Chuẩn hóa định dạng ngày và loại bỏ trùng lặp
-            $uniqueDates = [];
+            $uniqueDates = $allDates; // Bắt đầu với danh sách ngày chuẩn
+            
             foreach ($dates as $date => $counts) {
                 $normalizedDate = Carbon::parse($date)->format('Y-m-d');
-                if (!isset($uniqueDates[$normalizedDate])) {
-                    $uniqueDates[$normalizedDate] = $counts;
-                } else {
-                    // Nếu ngày đã tồn tại, cộng dồn giá trị
+                if (isset($uniqueDates[$normalizedDate])) {
                     $uniqueDates[$normalizedDate]['created'] += $counts['created'];
                     $uniqueDates[$normalizedDate]['executed'] += $counts['executed'];
                     $uniqueDates[$normalizedDate]['retested'] += $counts['retested'];
                 }
             }
-
-            // Điền giá trị 0 cho các ngày không có dữ liệu
-            foreach ($dateRange as $date) {
-                $dateString = $date->format('Y-m-d');
-                if (!isset($uniqueDates[$dateString])) {
-                    $uniqueDates[$dateString] = [
-                        'date' => $dateString,
-                        'created' => 0,
-                        'executed' => 0,
-                        'retested' => 0,
-                    ];
-                }
-            }
-
-            // Sắp xếp lại các ngày theo thứ tự tăng dần
+            
             ksort($uniqueDates);
-
-            // Gán lại dữ liệu đã chuẩn hóa vào $dates
             $dates = $uniqueDates;
         }
     }
-
+    
     public function generateTestReport(Request $request)
     {
         $request->validate([
-            'file' => 'required|mimes:xlsx,xls|max:2048',
+            'files.*' => 'required|mimes:xlsx,xls|max:2048',
         ]);
-
-        $file = $request->file('file');
-        $spreadsheet = IOFactory::load($file->getPathname());
-        $sheet = $spreadsheet->getSheet(1);
-        $data = $sheet->toArray();
-
+    
         $reportData = [];
-
-        foreach ($data as $key => $value) {
-            if ($key < 4) {
-                continue;
-            }
-
-            $createDate = $value[10];
-            $createBy = $value[9];
-
-            $executeDate = $value[12];
-            $executeBy = $value[11];
-
-            $retestDate = $value[14];
-            $retestBy = $value[13];
-
-            if ($createDate && $createBy) {
-                $this->updateReportData($reportData, $createBy, $createDate, 'created');
-            }
-
-            if ($executeDate && $executeBy) {
-                $this->updateReportData($reportData, $executeBy, $executeDate, 'executed');
-            }
-
-            if ($retestDate && $retestBy) {
-                $this->updateReportData($reportData, $retestBy, $retestDate, 'retested');
+    
+        foreach ($request->file('files') as $file) {
+            $spreadsheet = IOFactory::load($file->getPathname());
+            $sheet = $spreadsheet->getSheet(1);
+            $data = $sheet->toArray();
+    
+            foreach ($data as $key => $value) {
+                if ($key < 4) {
+                    continue;
+                }
+    
+                $createDate = $value[10];
+                $createBy = $value[9];
+                $executeDate = $value[12];
+                $executeBy = $value[11];
+                $retestDate = $value[14];
+                $retestBy = $value[13];
+    
+                if ($createDate && $createBy) {
+                    $this->updateReportData($reportData, $createBy, $createDate, 'created');
+                }
+    
+                if ($executeDate && $executeBy) {
+                    $this->updateReportData($reportData, $executeBy, $executeDate, 'executed');
+                }
+    
+                if ($retestDate && $retestBy) {
+                    $this->updateReportData($reportData, $retestBy, $retestDate, 'retested');
+                }
             }
         }
-
-        // Tìm ngày nhỏ nhất và lớn nhất
+    
         list($minDate, $maxDate) = $this->getMinMaxDates($reportData);
-
-        // Điền giá trị 0 cho các ngày không có dữ liệu và sắp xếp
         $this->fillMissingDates($reportData, $minDate, $maxDate);
-
+    
         return $this->exportToExcel($reportData);
     }
 
@@ -133,11 +134,11 @@ class ExcelController extends Controller
         if ($user && $date) {
             // Chuẩn hóa định dạng ngày thành Y-m-d
             $normalizedDate = Carbon::createFromFormat('m/d/Y', $date)->format('Y-m-d');
-    
+
             if (!isset($reportData[$user])) {
                 $reportData[$user] = [];
             }
-    
+
             if (!isset($reportData[$user][$normalizedDate])) {
                 $reportData[$user][$normalizedDate] = [
                     'date' => $normalizedDate,
